@@ -1,0 +1,54 @@
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Python / ai_service ───────────────────────────────────────────────────────
+ai_service/venv/
+ai_service/__pycache__/
+ai_service/**/__pycache__/
+ai_service/**/*.pyc
+ai_service/**/*.pyo
+ai_service/.env
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# ── Laravel / backend ────────────────────────────────────────────────────────
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/vendor/
+backend/node_modules/
+backend/public/build/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/storage/pail
+backend/storage/app/private/
+backend/bootstrap/cache/*.php
+backend/.phpunit.result.cache
+backend/.phpunit.cache
+backend/auth.json
+backend/*.log
+backend/Homestead.json
+backend/Homestead.yaml
+
+# ── IDE / editors ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+.zed/
+.nova/
+.cursor/
+*.swp
+*.swo
+
+# ── Temp / uploads ────────────────────────────────────────────────────────────
+/tmp/
+*.pdf
+*.jpg
+*.jpeg
+*.png
+!ai_service/test_samples/
