@@ -10,6 +10,8 @@ ai_service/**/__pycache__/
 ai_service/**/*.pyc
 ai_service/**/*.pyo
 ai_service/.env
+ai_service/.env.*
+!ai_service/.env.example
 .mypy_cache/
 *.egg-info/
 dist/

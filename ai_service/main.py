@@ -4,10 +4,16 @@ import os
 # "crashed on child side of fork pre-exec" on macOS.
 os.environ.setdefault("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES")
 
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Header, HTTPException, Depends
 from fastapi.concurrency import run_in_threadpool
 from datetime import datetime
 import uuid
+
+_API_KEY = os.getenv("API_KEY")
+
+async def verify_api_key(x_api_key: str = Header(..., description="API key for authentication")):
+    if not _API_KEY or x_api_key != _API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
 # Import our custom AI models and MongoDB
 from database import jobs_collection
@@ -93,7 +99,7 @@ async def process_pipeline(job_id: str, file_bytes: bytes, filename: str):
         )
 
 
-@app.post("/process-document")
+@app.post("/process-document", dependencies=[Depends(verify_api_key)])
 async def process_document(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """Receives a document, saves initial state to MongoDB, and starts processing."""
     job_id = str(uuid.uuid4())
@@ -116,7 +122,7 @@ async def process_document(background_tasks: BackgroundTasks, file: UploadFile =
     return {"job_id": job_id, "status": "processing", "filename": file.filename}
 
 
-@app.get("/job-status/{job_id}")
+@app.get("/job-status/{job_id}", dependencies=[Depends(verify_api_key)])
 async def job_status(job_id: str):
     """Returns the current status of a job from MongoDB."""
     job = await jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
@@ -125,7 +131,7 @@ async def job_status(job_id: str):
     return {"job_id": job_id, "status": "not_found"}
 
 
-@app.get("/result/{job_id}")
+@app.get("/result/{job_id}", dependencies=[Depends(verify_api_key)])
 async def result(job_id: str):
     """Returns the extracted structured data for a completed job from MongoDB."""
     job = await jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
@@ -136,7 +142,7 @@ async def result(job_id: str):
     if job.get("status") in ["completed", "failed", "cancelled"]:
         return {"job_id": job_id, "data": job}
         
-@app.post("/cancel/{job_id}")
+@app.post("/cancel/{job_id}", dependencies=[Depends(verify_api_key)])
 async def cancel_job(job_id: str):
     """Cancels a processing job."""
     result = await jobs_collection.update_one(

@@ -1,0 +1,20 @@
+services:
+  ai_service:
+    build: ./ai_service
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./ai_service/.env
+    restart: unless-stopped
+
+  backend:
+    image: php:8.2-apache
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/html
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - ai_service
+    restart: unless-stopped
