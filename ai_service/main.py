@@ -15,8 +15,7 @@ async def verify_api_key(x_api_key: str = Header(..., description="API key for a
     if not _API_KEY or x_api_key != _API_KEY:
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
-# Import our custom AI models and MongoDB
-from database import jobs_collection
+from database import create_job, get_job, update_job
 from models.ocr import extract_text
 from models.ner import extract_entities
 from models.icd_mapper import map_to_icd
@@ -33,99 +32,65 @@ async def startup_event():
     print("AI models loaded and ready!")
 
 async def process_pipeline(job_id: str, file_bytes: bytes, filename: str):
-    """The actual background task that runs the AI models and updates MongoDB."""
+    """Background task: runs the AI pipeline and writes results to MySQL."""
     try:
-        # Check if cancelled before starting
-        job_check = await jobs_collection.find_one({"job_id": job_id})
-        if job_check and job_check.get("status") == "cancelled":
+        job = await get_job(job_id)
+        if job and job.get("status") == "cancelled":
             return
-            
-        # Get file extension
-        import os
-        ext = os.path.splitext(filename)[1].lower()
-        if not ext:
-            ext = ".pdf"
-            
-        # 1. Save file temporarily
+
+        ext = os.path.splitext(filename)[1].lower() or ".pdf"
         temp_path = f"/tmp/{job_id}{ext}"
         with open(temp_path, "wb") as f:
             f.write(file_bytes)
-            
-        # 2. Extract Text via OCR (CPU bound, run in threadpool)
+
+        # 1. OCR
         text, confidence = await run_in_threadpool(extract_text, temp_path)
-        
-        # Check if cancelled after OCR
-        job_check = await jobs_collection.find_one({"job_id": job_id})
-        if job_check and job_check.get("status") == "cancelled":
+
+        job = await get_job(job_id)
+        if job and job.get("status") == "cancelled":
             return
-            
-        # 3. Extract Medical Entities (CPU bound, run in threadpool)
+
+        # 2. NER
         entities = await run_in_threadpool(extract_entities, text)
-        
-        # Check if cancelled after NER
-        job_check = await jobs_collection.find_one({"job_id": job_id})
-        if job_check and job_check.get("status") == "cancelled":
+
+        job = await get_job(job_id)
+        if job and job.get("status") == "cancelled":
             return
-            
-        # 4. Map Diseases to ICD codes (Async DB queries)
+
+        # 3. ICD mapping
         icd_mappings = {}
         for disease in entities["diseases"]:
             icd_code = await map_to_icd(disease)
             if icd_code:
                 icd_mappings[disease] = icd_code
-                
-        # 5. Save Results to MongoDB
-        await jobs_collection.update_one(
-            {"job_id": job_id},
-            {"$set": {
-                "status": "completed",
-                "raw_text": text,
-                "confidence": confidence,
-                "entities": entities,
-                "icd_codes": icd_mappings,
-                "updated_at": datetime.utcnow()
-            }}
+
+        # 4. Persist
+        await update_job(
+            job_id,
+            status="completed",
+            raw_text=text,
+            confidence=confidence,
+            entities=entities,
+            icd_codes=icd_mappings,
         )
-        
+
     except Exception as e:
-        # Mark job as failed in MongoDB
-        await jobs_collection.update_one(
-            {"job_id": job_id},
-            {"$set": {
-                "status": "failed",
-                "error": str(e),
-                "updated_at": datetime.utcnow()
-            }}
-        )
+        await update_job(job_id, status="failed", error=str(e))
 
 
 @app.post("/process-document", dependencies=[Depends(verify_api_key)])
 async def process_document(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
-    """Receives a document, saves initial state to MongoDB, and starts processing."""
+    """Accepts a document upload, creates a job row in MySQL, and queues processing."""
     job_id = str(uuid.uuid4())
-    
-    # Store initial job state in MongoDB
-    await jobs_collection.insert_one({
-        "job_id": job_id,
-        "status": "processing",
-        "filename": file.filename,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
-    })
-    
-    # Read file content into memory
+    await create_job(job_id, file.filename)
     file_bytes = await file.read()
-    
-    # Pass to FastAPI Background Tasks
     background_tasks.add_task(process_pipeline, job_id, file_bytes, file.filename)
-    
     return {"job_id": job_id, "status": "processing", "filename": file.filename}
 
 
 @app.get("/job-status/{job_id}", dependencies=[Depends(verify_api_key)])
 async def job_status(job_id: str):
-    """Returns the current status of a job from MongoDB."""
-    job = await jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
+    job = await get_job(job_id)
     if job:
         return {"job_id": job_id, "status": job.get("status")}
     return {"job_id": job_id, "status": "not_found"}
@@ -133,24 +98,18 @@ async def job_status(job_id: str):
 
 @app.get("/result/{job_id}", dependencies=[Depends(verify_api_key)])
 async def result(job_id: str):
-    """Returns the extracted structured data for a completed job from MongoDB."""
-    job = await jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
-    
+    job = await get_job(job_id)
     if not job:
         return {"error": "Result not ready or job not found", "current_status": "not_found"}
-        
-    if job.get("status") in ["completed", "failed", "cancelled"]:
+    if job.get("status") in ("completed", "failed", "cancelled"):
         return {"job_id": job_id, "data": job}
-        
+    return {"error": "Result not ready", "current_status": job.get("status")}
+
+
 @app.post("/cancel/{job_id}", dependencies=[Depends(verify_api_key)])
 async def cancel_job(job_id: str):
-    """Cancels a processing job."""
-    result = await jobs_collection.update_one(
-        {"job_id": job_id, "status": "processing"},
-        {"$set": {"status": "cancelled", "updated_at": datetime.utcnow()}}
-    )
-    if result.modified_count == 1:
+    job = await get_job(job_id)
+    if job and job.get("status") == "processing":
+        await update_job(job_id, status="cancelled")
         return {"job_id": job_id, "status": "cancelled", "message": "Job cancellation requested."}
     return {"error": "Job not found or already completed/failed/cancelled."}
-        
-    return {"error": "Result not ready", "current_status": job.get("status")}

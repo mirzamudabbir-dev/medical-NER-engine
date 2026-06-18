@@ -5,6 +5,8 @@ services:
       - "8000:8000"
     env_file:
       - ./ai_service/.env
+    depends_on:
+      - db
     restart: unless-stopped
 
   backend:
@@ -16,5 +18,30 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - ai_service
+      - db
     restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: medical_doc_engine
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
+# ── Using your own MySQL (XAMPP / existing server) ────────────────────────────
+# Remove the `db` service above and set these in ai_service/.env and backend/.env:
+#
+#   DB_HOST=127.0.0.1      (or your MySQL server IP)
+#   DB_PORT=3306
+#   DB_DATABASE=medical_doc_engine
+#   DB_USERNAME=root
+#   DB_PASSWORD=your_password
+#
+# Then just run:  docker compose up ai_service backend

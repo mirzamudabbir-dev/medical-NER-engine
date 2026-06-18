@@ -209,20 +209,48 @@ curl http://localhost:8000/result/{job_id}
 ### Prerequisites
 - Python 3.12
 - PHP 8.2 + Composer
-- MongoDB
-- Tesseract OCR (`brew install tesseract` on macOS)
-- Poppler (`brew install poppler` on macOS — needed for PDF→image)
+- MySQL 8.0 (XAMPP, Docker, or any hosted MySQL)
+- Tesseract OCR (`brew install tesseract` on macOS / `apt install tesseract-ocr` on Linux)
+- Poppler (`brew install poppler` on macOS / `apt install poppler-utils` on Linux)
 
-### AI Service
+### Option A — Docker (recommended)
+```bash
+# 1. Clone the repo
+git clone https://github.com/mirzamudabbir-dev/medical-NER-engine.git
+cd medical-NER-engine
+
+# 2. Configure environment
+cp ai_service/.env.example ai_service/.env   # fill in DB creds + API_KEY
+cp backend/.env.example backend/.env         # fill in DB creds + APP_KEY
+
+# 3. Start everything (MySQL + AI service + backend)
+docker compose up --build
+
+# 4. Create the AI service tables (run once)
+docker compose exec ai_service python create_tables.py
+
+# 5. Import ICD-10 codes (run once, needs the official XML)
+docker compose exec ai_service python import_icd_codes.py /path/to/icd10c-tabular.xml
+```
+
+### Option B — Manual setup
+
+**AI Service**
 ```bash
 cd ai_service
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+
+cp .env.example .env            # fill in DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD, API_KEY
+
+python create_tables.py         # creates ai_processing_jobs and icd_codes tables
+python import_icd_codes.py /path/to/icd10c-tabular.xml
+
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### Backend
+**Backend**
 ```bash
 cd backend
 composer install
@@ -230,6 +258,16 @@ cp .env.example .env
 php artisan key:generate
 php artisan migrate --seed
 php artisan serve
+```
+
+### Using an existing MySQL (XAMPP / cPanel / RDS)
+Just point both `.env` files at your existing server — no Docker needed:
+```
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=medical_doc_engine
+DB_USERNAME=root
+DB_PASSWORD=your_password
 ```
 
 ---
