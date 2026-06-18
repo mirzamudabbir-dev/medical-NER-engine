@@ -44,12 +44,6 @@ return [
             'transaction_mode' => 'DEFERRED',
         ],
 
-        'mongodb' => [
-            'driver' => 'mongodb',
-            'dsn' => env('MONGODB_URI', 'mongodb+srv://localhost:27017'),
-            'database' => env('MONGODB_DATABASE', 'medical_doc_engine'),
-        ],
-
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
