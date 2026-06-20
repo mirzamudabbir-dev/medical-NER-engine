@@ -29,11 +29,15 @@ RUN printf "APP_NAME=Laravel\nAPP_ENV=production\nAPP_KEY=placeholder\nAPP_URL=h
 
 RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
 
-RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
-    && composer dump-autoload --optimize \
-    && rm -f .env \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+
+RUN composer dump-autoload --optimize
+
+RUN rm -f .env
+
+RUN chown -R www-data:www-data storage bootstrap/cache
+
+RUN chmod -R 775 storage bootstrap/cache
 
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/start.sh /start.sh
