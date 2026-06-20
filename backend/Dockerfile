@@ -29,8 +29,9 @@ RUN printf "APP_NAME=Laravel\nAPP_ENV=production\nAPP_KEY=placeholder\nAPP_URL=h
 
 RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
 
-RUN rm -f .env \
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
     && composer dump-autoload --optimize \
+    && rm -f .env \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
