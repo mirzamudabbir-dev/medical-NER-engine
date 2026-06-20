@@ -25,7 +25,7 @@ RUN npm ci
 
 COPY . .
 
-RUN cp .env.example .env \
+RUN printf "APP_NAME=Laravel\nAPP_ENV=production\nAPP_KEY=placeholder\nAPP_URL=http://localhost\nVITE_APP_NAME=Laravel\n" > .env \
     && npm run build \
     && rm .env \
     && composer dump-autoload --optimize \
