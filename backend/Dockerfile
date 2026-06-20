@@ -31,7 +31,7 @@ RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
 
-RUN composer dump-autoload --optimize
+RUN composer dump-autoload --optimize --no-scripts
 
 RUN rm -f .env
 
