@@ -17,15 +17,21 @@ _DB   = os.getenv("DB_DATABASE", "medical_doc_engine")
 _USER = os.getenv("DB_USERNAME", "root")
 _PASS = os.getenv("DB_PASSWORD", "")
 
+_SSL = os.getenv("DB_SSLMODE", "prefer")
+
 # Use URL.create so special characters in Render-generated passwords don't corrupt the URL
 _ASYNC_URL = SA_URL.create("postgresql+asyncpg",  username=_USER, password=_PASS, host=_HOST, port=_PORT, database=_DB)
 _SYNC_URL  = SA_URL.create("postgresql+psycopg2", username=_USER, password=_PASS, host=_HOST, port=_PORT, database=_DB)
 
+_ssl_args = {"ssl": "require"} if _SSL == "require" else {}
+
 # Async engine for FastAPI endpoints
-engine = create_async_engine(_ASYNC_URL, echo=False, pool_pre_ping=True)
+engine = create_async_engine(_ASYNC_URL, echo=False, pool_pre_ping=True, connect_args=_ssl_args)
+
+_sync_ssl = {"sslmode": "require"} if _SSL == "require" else {}
 
 # Sync engine for one-off scripts (import_icd_codes, dump_latest)
-sync_engine = create_engine(_SYNC_URL, echo=False)
+sync_engine = create_engine(_SYNC_URL, echo=False, connect_args=_sync_ssl)
 
 
 # ── Job helpers ───────────────────────────────────────────────────────────────
