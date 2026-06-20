@@ -11,13 +11,13 @@ _backend_env = os.path.join(os.path.dirname(__file__), "..", "backend", ".env")
 load_dotenv(_ai_env if os.path.exists(_ai_env) else _backend_env)
 
 _HOST = os.getenv("DB_HOST", "127.0.0.1")
-_PORT = os.getenv("DB_PORT", "3306")
+_PORT = os.getenv("DB_PORT", "5432")
 _DB   = os.getenv("DB_DATABASE", "medical_doc_engine")
 _USER = os.getenv("DB_USERNAME", "root")
 _PASS = os.getenv("DB_PASSWORD", "")
 
-_ASYNC_URL = f"mysql+aiomysql://{_USER}:{_PASS}@{_HOST}:{_PORT}/{_DB}"
-_SYNC_URL  = f"mysql+pymysql://{_USER}:{_PASS}@{_HOST}:{_PORT}/{_DB}"
+_ASYNC_URL = f"postgresql+asyncpg://{_USER}:{_PASS}@{_HOST}:{_PORT}/{_DB}"
+_SYNC_URL  = f"postgresql+psycopg2://{_USER}:{_PASS}@{_HOST}:{_PORT}/{_DB}"
 
 # Async engine for FastAPI endpoints
 engine = create_async_engine(_ASYNC_URL, echo=False, pool_pre_ping=True)
