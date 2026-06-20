@@ -25,7 +25,9 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run build \
+RUN cp .env.example .env \
+    && npm run build \
+    && rm .env \
     && composer dump-autoload --optimize \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
