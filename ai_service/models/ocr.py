@@ -2,8 +2,6 @@ import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
 from pytesseract import Output
-import cv2
-import numpy as np
 import pdfplumber
 
 # LSTM engine + uniform-block layout — best balance for medical forms/reports
@@ -16,6 +14,8 @@ def get_ocr_model():
 
 def _preprocess_image(img: Image.Image) -> Image.Image:
     """Apply OpenCV preprocessing to improve Tesseract accuracy on scanned documents."""
+    import cv2
+    import numpy as np
     arr = np.array(img.convert("RGB"))
     gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
     # Denoise before thresholding to avoid amplifying noise into black speckles

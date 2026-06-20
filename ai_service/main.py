@@ -22,15 +22,6 @@ from models.icd_mapper import map_to_icd
 
 app = FastAPI(title="Medical Document Intelligence Engine")
 
-@app.on_event("startup")
-async def startup_event():
-    print("Pre-loading AI models in the main thread to prevent threadpool deadlocks...")
-    from models.ocr import get_ocr_model
-    from models.ner import get_nlp_model
-    get_ocr_model()
-    get_nlp_model()
-    print("AI models loaded and ready!")
-
 async def process_pipeline(job_id: str, file_bytes: bytes, filename: str):
     """Background task: runs the AI pipeline and writes results to MySQL."""
     try:

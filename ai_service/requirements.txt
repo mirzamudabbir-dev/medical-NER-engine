@@ -8,7 +8,6 @@ python-dotenv>=1.0.0
 spacy==3.7.4
 scispacy==0.6.2
 opencv-python-headless==4.9.0.80
-PyMuPDF==1.23.21
 pdfplumber==0.10.3
 python-dateutil>=2.8.2
 pytesseract>=0.3.10
@@ -16,5 +15,4 @@ pdf2image>=1.16.3
 Pillow>=10.0.0
 numpy>=1.24.0
 # SciSpacy Models
-https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz
 https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_ner_bc5cdr_md-0.5.4.tar.gz
