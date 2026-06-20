@@ -19,7 +19,7 @@ class DocumentController extends Controller
     public function index()
     {
         // For the dashboard
-        $documents = Document::with('processingJob', 'claim')->orderBy('created_at', -1)->get();
+        $documents = Document::with('processingJob', 'claim')->orderBy('created_at', 'desc')->get();
         return view('home', compact('documents'));
     }
 
@@ -50,9 +50,12 @@ class DocumentController extends Controller
 
         // Call FastAPI Microservice
         try {
-            $response = Http::timeout(10)->attach(
-                'file', file_get_contents(Storage::path($path)), $file->getClientOriginalName()
-            )->post('http://127.0.0.1:8000/process-document');
+            $aiUrl = config('services.ai_service.url');
+            $aiKey = config('services.ai_service.key');
+            $response = Http::timeout(10)
+                ->withHeaders(['X-Api-Key' => $aiKey])
+                ->attach('file', file_get_contents(Storage::path($path)), $file->getClientOriginalName())
+                ->post("{$aiUrl}/process-document");
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -127,7 +130,11 @@ class DocumentController extends Controller
     {
         if ($document->status === 'processing' && $document->processingJob) {
             try {
-                $response = Http::timeout(5)->get('http://127.0.0.1:8000/result/' . $document->processingJob->fastapi_job_id);
+                $aiUrl = config('services.ai_service.url');
+                $aiKey = config('services.ai_service.key');
+                $response = Http::timeout(5)
+                    ->withHeaders(['X-Api-Key' => $aiKey])
+                    ->get("{$aiUrl}/result/{$document->processingJob->fastapi_job_id}");
 
                 if ($response->successful() && isset($response->json()['data'])) {
                     $data = $response->json()['data'];
@@ -369,7 +376,11 @@ class DocumentController extends Controller
     {
         if ($document->status === 'processing' && $document->processingJob) {
             try {
-                $response = Http::timeout(5)->post('http://127.0.0.1:8000/cancel/' . $document->processingJob->fastapi_job_id);
+                $aiUrl = config('services.ai_service.url');
+                $aiKey = config('services.ai_service.key');
+                $response = Http::timeout(5)
+                    ->withHeaders(['X-Api-Key' => $aiKey])
+                    ->post("{$aiUrl}/cancel/{$document->processingJob->fastapi_job_id}");
                 
                 if ($response->successful()) {
                     $document->processingJob->update(['status' => 'cancelled']);

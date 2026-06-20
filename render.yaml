@@ -1,0 +1,97 @@
+services:
+  # ── AI Service (FastAPI + PyTorch/PaddleOCR) ─────────────────────────────────
+  - type: web
+    name: medical-ai-service
+    runtime: docker
+    dockerfilePath: ./ai_service/Dockerfile
+    dockerContext: ./ai_service
+    plan: starter            # Tesseract + SciSpacy fits comfortably in 512MB
+    healthCheckPath: /docs
+    envVars:
+      - key: API_KEY
+        generateValue: true
+      - key: DB_HOST
+        fromDatabase:
+          name: medical-mysql
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: medical-mysql
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: medical-mysql
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: medical-mysql
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: medical-mysql
+          property: password
+
+  # ── Laravel Backend ───────────────────────────────────────────────────────────
+  - type: web
+    name: medical-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        value: https://medical-backend.onrender.com   # update after first deploy
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        fromDatabase:
+          name: medical-mysql
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: medical-mysql
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: medical-mysql
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: medical-mysql
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: medical-mysql
+          property: password
+      - key: AI_SERVICE_URL
+        fromService:
+          type: web
+          name: medical-ai-service
+          property: host
+      - key: AI_SERVICE_KEY
+        fromService:
+          type: web
+          name: medical-ai-service
+          envVarKey: API_KEY
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: ASSET_URL
+        value: ""    # set to your Cloudflare Pages URL after deploying there
+
+# ── MySQL Database ────────────────────────────────────────────────────────────
+databases:
+  - name: medical-mysql
+    databaseName: medical_doc_engine
+    user: medical_user
+    plan: starter

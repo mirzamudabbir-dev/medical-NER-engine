@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class Role extends Model
 {
     protected $fillable = ['name', 'permissions'];
+
+    protected $casts = [
+        'permissions' => 'array',
+    ];
 
     public function users()
     {

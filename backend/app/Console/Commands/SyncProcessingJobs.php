@@ -18,7 +18,7 @@ class SyncProcessingJobs extends Command
         $this->info("Found {$jobs->count()} jobs to sync.");
 
         $apiKey = config('services.ai_service.key');
-        $apiUrl = config('services.ai_service.url', 'http://127.0.0.1:8000');
+        $apiUrl = config('services.ai_service.url');
 
         foreach ($jobs as $job) {
             try {

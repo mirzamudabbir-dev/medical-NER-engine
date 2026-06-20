@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class ProcessingJob extends Model
 {
@@ -11,6 +11,10 @@ class ProcessingJob extends Model
         'fastapi_job_id',
         'status',
         'result_payload'
+    ];
+
+    protected $casts = [
+        'result_payload' => 'array',
     ];
 
     public function document()

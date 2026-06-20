@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class Claim extends Model
 {
@@ -34,11 +34,12 @@ class Claim extends Model
         'follow_up_instructions',
         'confidence',
         'status',
+        'rejection_reason',
         'reviewer_id'
     ];
 
     protected $casts = [
-        'prescriptions' => 'array',
+        'prescriptions'    => 'array',
         'lab_test_results' => 'array',
     ];
 
