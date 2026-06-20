@@ -25,9 +25,11 @@ RUN npm ci
 
 COPY . .
 
-RUN printf "APP_NAME=Laravel\nAPP_ENV=production\nAPP_KEY=placeholder\nAPP_URL=http://localhost\nVITE_APP_NAME=Laravel\n" > .env \
-    && npm run build \
-    && rm .env \
+RUN printf "APP_NAME=Laravel\nAPP_ENV=production\nAPP_KEY=placeholder\nAPP_URL=http://localhost\nVITE_APP_NAME=Laravel\n" > .env
+
+RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
+
+RUN rm -f .env \
     && composer dump-autoload --optimize \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
