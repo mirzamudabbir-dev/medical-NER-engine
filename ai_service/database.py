@@ -11,7 +11,7 @@ _backend_env = os.path.join(os.path.dirname(__file__), "..", "backend", ".env")
 load_dotenv(_ai_env if os.path.exists(_ai_env) else _backend_env)
 
 _HOST = os.getenv("DB_HOST", "127.0.0.1")
-_PORT = os.getenv("DB_PORT") or "5432"
+_PORT = int(os.getenv("DB_PORT") or 5432)
 _DB   = os.getenv("DB_DATABASE", "medical_doc_engine")
 _USER = os.getenv("DB_USERNAME", "root")
 _PASS = os.getenv("DB_PASSWORD", "")
