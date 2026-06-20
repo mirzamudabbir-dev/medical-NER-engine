@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import URL as SA_URL
 from dotenv import load_dotenv
 
 # Load from ai_service/.env first; fall back to backend/.env (shared deployment)
@@ -16,8 +17,9 @@ _DB   = os.getenv("DB_DATABASE", "medical_doc_engine")
 _USER = os.getenv("DB_USERNAME", "root")
 _PASS = os.getenv("DB_PASSWORD", "")
 
-_ASYNC_URL = f"postgresql+asyncpg://{_USER}:{_PASS}@{_HOST}:{_PORT}/{_DB}"
-_SYNC_URL  = f"postgresql+psycopg2://{_USER}:{_PASS}@{_HOST}:{_PORT}/{_DB}"
+# Use URL.create so special characters in Render-generated passwords don't corrupt the URL
+_ASYNC_URL = SA_URL.create("postgresql+asyncpg",  username=_USER, password=_PASS, host=_HOST, port=_PORT, database=_DB)
+_SYNC_URL  = SA_URL.create("postgresql+psycopg2", username=_USER, password=_PASS, host=_HOST, port=_PORT, database=_DB)
 
 # Async engine for FastAPI endpoints
 engine = create_async_engine(_ASYNC_URL, echo=False, pool_pre_ping=True)

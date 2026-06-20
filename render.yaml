@@ -13,11 +13,11 @@ services:
       - key: DB_HOST
         fromDatabase:
           name: medical-db
-          property: host
+          property: hostExternal
       - key: DB_PORT
         fromDatabase:
           name: medical-db
-          property: port
+          property: portExternal
       - key: DB_DATABASE
         fromDatabase:
           name: medical-db
@@ -53,11 +53,11 @@ services:
       - key: DB_HOST
         fromDatabase:
           name: medical-db
-          property: host
+          property: hostExternal
       - key: DB_PORT
         fromDatabase:
           name: medical-db
-          property: port
+          property: portExternal
       - key: DB_DATABASE
         fromDatabase:
           name: medical-db
