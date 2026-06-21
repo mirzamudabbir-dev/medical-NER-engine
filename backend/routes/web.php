@@ -12,6 +12,7 @@ use App\Http\Controllers\DocumentController;
 
 Route::get('/home', [DocumentController::class, 'index'])->name('home');
 Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
+Route::get('/documents', fn() => redirect()->route('home'));
 Route::get('/documents/{document}/review', [DocumentController::class, 'show'])->name('documents.show');
 Route::get('/documents/{document}/file', [DocumentController::class, 'file'])->name('documents.file');
 Route::put('/documents/{document}', [DocumentController::class, 'update'])->name('documents.update')->middleware('role:Reviewer');
