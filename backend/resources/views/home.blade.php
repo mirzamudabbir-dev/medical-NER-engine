@@ -126,6 +126,14 @@
                                             @csrf
                                             <button type="submit" class="px-4 py-1.5 rounded-full text-xs font-medium border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">Cancel Job</button>
                                         </form>
+                                    @elseif($doc->status == 'failed' || $doc->status == 'uploaded')
+                                        <div class="flex items-center justify-end gap-2">
+                                            <form action="{{ route('documents.retry', $doc->id) }}" method="POST" class="inline-block">
+                                                @csrf
+                                                <button type="submit" class="px-4 py-1.5 rounded-full text-xs font-medium border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors">Retry AI</button>
+                                            </form>
+                                            <a href="{{ route('documents.show', $doc->id) }}" class="px-4 py-1.5 rounded-full text-xs font-medium bg-[#c86b51] text-white hover:bg-[#b05d45] transition-colors inline-block">Review Manually</a>
+                                        </div>
                                     @elseif($doc->status == 'completed')
                                         @if($doc->claim && $doc->claim->status != 'pending')
                                             <div class="flex items-center justify-end gap-2">

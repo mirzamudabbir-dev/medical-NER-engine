@@ -64,6 +64,8 @@ class DocumentController extends Controller
                     'status' => $data['status'],
                 ]);
                 $document->update(['status' => 'processing']);
+            } else {
+                $document->update(['status' => 'failed']);
             }
         } catch (\Exception $e) {
             $document->update(['status' => 'failed']);
@@ -85,45 +87,84 @@ class DocumentController extends Controller
 
     public function update(Request $request, Document $document)
     {
-        if ($document->claim) {
-            $document->claim->update([
-                'patient_name' => $request->patient_name,
-                'dob' => $request->dob,
-                'age' => $request->age,
-                'gender' => $request->gender,
-                'facility' => $request->hospital_name, // Mapping from hospital_name to facility
-                'facility_address' => $request->facility_address,
-                'doctor' => $request->doctor_name, // Mapping from doctor_name to doctor
-                'admission_date' => $request->admission_date,
-                'discharge_date' => $request->discharge_date,
-                'duration_of_stay' => $request->stay_duration, // Mapping from stay_duration to duration_of_stay
-                'disease' => $request->primary_diagnosis, // Mapping from primary_diagnosis to disease
-                'secondary_diagnosis' => $request->secondary_diagnosis,
-                'icd_code' => $request->icd10_code, // Mapping from icd10_code to icd_code
-                'nature_of_treatment' => $request->nature_of_treatment,
-                'chief_complaints' => $request->chief_complaints,
-                'cpt_codes' => $request->cpt_codes,
-                'room_rent_category' => $request->room_category, // Mapping from room_category to room_rent_category
-                'claim_amount' => $request->total_bill_amount, // Mapping from total_bill_amount to claim_amount
-                'itemised_bill_totals' => $request->itemised_totals, // Mapping from itemised_totals to itemised_bill_totals
-                'follow_up_instructions' => $request->follow_up_instructions,
-                'prescriptions' => $request->prescription_medicines, // Mapping from prescription_medicines to prescriptions
-                'lab_test_results' => ['names' => $request->lab_test_names, 'values' => $request->lab_test_values],
-                'status' => $request->status,
-                'rejection_reason' => $request->rejection_reason,
-                'reviewer_id' => auth()->id(),
-            ]);
+        $claimData = [
+            'patient_name' => $request->patient_name,
+            'dob' => $request->dob,
+            'age' => $request->age,
+            'gender' => $request->gender,
+            'facility' => $request->hospital_name,
+            'facility_address' => $request->facility_address,
+            'doctor' => $request->doctor_name,
+            'admission_date' => $request->admission_date,
+            'discharge_date' => $request->discharge_date,
+            'duration_of_stay' => $request->stay_duration,
+            'disease' => $request->primary_diagnosis,
+            'secondary_diagnosis' => $request->secondary_diagnosis,
+            'icd_code' => $request->icd10_code,
+            'nature_of_treatment' => $request->nature_of_treatment,
+            'chief_complaints' => $request->chief_complaints,
+            'cpt_codes' => $request->cpt_codes,
+            'room_rent_category' => $request->room_category,
+            'claim_amount' => $request->total_bill_amount,
+            'itemised_bill_totals' => $request->itemised_totals,
+            'follow_up_instructions' => $request->follow_up_instructions,
+            'prescriptions' => $request->prescription_medicines,
+            'lab_test_results' => ['names' => $request->lab_test_names, 'values' => $request->lab_test_values],
+            'status' => $request->status,
+            'rejection_reason' => $request->rejection_reason,
+            'reviewer_id' => auth()->id(),
+        ];
 
-            AuditLog::create([
-                'user_id' => auth()->id(),
-                'action' => ucfirst($request->status) . ' Claim',
-                'entity_type' => 'Claim',
-                'entity_id' => $document->claim->id,
-                'details' => ucfirst($request->status) . ' claim for ' . $request->patient_name . ' (' . $request->icd10_code . ')'
-            ]);
+        if ($document->claim) {
+            $document->claim->update($claimData);
+            $claimId = $document->claim->id;
+        } else {
+            $claim = $document->claim()->create($claimData);
+            $claimId = $claim->id;
+            $document->update(['status' => 'completed']);
         }
 
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => ucfirst($request->status) . ' Claim',
+            'entity_type' => 'Claim',
+            'entity_id' => $claimId,
+            'details' => ucfirst($request->status) . ' claim for ' . $request->patient_name . ' (' . $request->icd10_code . ')'
+        ]);
+
         return redirect()->route('home')->with('success', 'Claim updated successfully!');
+    }
+
+    public function retry(Document $document)
+    {
+        if (!in_array($document->status, ['failed', 'uploaded'])) {
+            return redirect()->back()->withErrors(['message' => 'Only failed or pending documents can be retried.']);
+        }
+
+        try {
+            $aiUrl = config('services.ai_service.url');
+            $aiKey = config('services.ai_service.key');
+            $response = Http::timeout(10)
+                ->withHeaders(['X-Api-Key' => $aiKey])
+                ->attach('file', file_get_contents(Storage::path($document->storage_path)), $document->original_filename)
+                ->post("{$aiUrl}/process-document");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $document->processingJob()->updateOrCreate(
+                    ['document_id' => $document->id],
+                    ['fastapi_job_id' => $data['job_id'], 'status' => $data['status']]
+                );
+                $document->update(['status' => 'processing']);
+                return redirect()->route('home')->with('success', 'Resubmitted for processing.');
+            } else {
+                $document->update(['status' => 'failed']);
+                return redirect()->route('home')->withErrors(['message' => 'AI service returned an error. Check AI_SERVICE_URL and AI_SERVICE_KEY env vars.']);
+            }
+        } catch (\Exception $e) {
+            $document->update(['status' => 'failed']);
+            return redirect()->route('home')->withErrors(['message' => 'Could not reach AI service: ' . $e->getMessage()]);
+        }
     }
 
     public function status(Document $document)
